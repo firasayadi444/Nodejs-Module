@@ -1,0 +1,168 @@
+{
+  "info": {
+    "_postman_id": "d899215a-f3c2-4b70-a23d-c997a5aed966",
+    "name": "Queen Bee - TP 2 et TP 3",
+    "description": "Collection de requetes pour les TP 2 et 3.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "hive_id",
+      "value": "SN-CASA-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "GET /api/hives — toutes les ruches",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives"
+      }
+    },
+    {
+      "name": "GET /api/hives — filtrer par site",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives?site_id=SN-CASA"
+      }
+    },
+    {
+      "name": "GET /api/hives/:id — succès",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives/{{hive_id}}"
+      }
+    },
+    {
+      "name": "GET /api/hives/:id — ruche inconnue (404)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives/XX-NOPE-999"
+      }
+    },
+    {
+      "name": "POST /api/hives/:id/measures — succès (201)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hive_id\": \"SN-CASA-001\",\n  \"site_id\": \"SN-CASA\",\n  \"timestamp\": \"2026-10-31T10:00:00Z\",\n  \"weight_kg\": 36.84\n}"
+        },
+        "url": "{{base_url}}/api/hives/{{hive_id}}/measures"
+      }
+    },
+    {
+      "name": "POST /api/hives/:id/measures — timestamp manquant (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"weight_kg\": 36.84\n}"
+        },
+        "url": "{{base_url}}/api/hives/{{hive_id}}/measures"
+      }
+    },
+    {
+      "name": "POST /api/hives/:id/measures — ruche inconnue (404)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timestamp\": \"2026-10-31T10:00:00Z\",\n  \"weight_kg\": 36.84\n}"
+        },
+        "url": "{{base_url}}/api/hives/XX-NOPE-999/measures"
+      }
+    },
+    {
+      "name": "GET /api/hives/:id/measures - historique",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives/{{hive_id}}/measures?limit=50&offset=0"
+      }
+    },
+    {
+      "name": "GET /api/hives/:id/measures - limite invalide (400)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives/{{hive_id}}/measures?limit=501"
+      }
+    },
+    {
+      "name": "GET /api/hives/:id/inspections",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/hives/{{hive_id}}/inspections"
+      }
+    },
+    {
+      "name": "POST /api/hives/:id/inspections - succes (201)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"d9428888-122b-4c1a-8f16-8c4d8e4b6a31\",\n  \"inspected_at\": \"2026-10-24T09:30:00Z\",\n  \"colony_status\": \"normale\",\n  \"queen_present\": true,\n  \"observations\": \"Couvain regulier\"\n}"
+        },
+        "url": "{{base_url}}/api/hives/{{hive_id}}/inspections"
+      }
+    },
+    {
+      "name": "POST /api/hives/:id/inspections - etat invalide (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"d9428888-122b-4c1a-8f16-8c4d8e4b6a32\",\n  \"inspected_at\": \"2026-10-24T09:30:00Z\",\n  \"colony_status\": \"inconnue\"\n}"
+        },
+        "url": "{{base_url}}/api/hives/{{hive_id}}/inspections"
+      }
+    },
+    {
+      "name": "GET route inconnue - format RFC 9457 (404)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/route-inconnue"
+      }
+    }
+  ]
+}
