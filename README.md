@@ -1,5 +1,10 @@
 # Queen Bee — TP Backend Node.js
 
+## Membres du groupe
+
+- Firas AYADI
+- BENBRAHIM Mohamed
+
 ## TP 1 — Lecture des mesures sans bloquer
 
 Mesures relevées sur ce poste avec la sonde `/ping` pendant l’import. Les durées varient selon la machine.
