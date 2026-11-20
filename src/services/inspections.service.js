@@ -12,14 +12,13 @@ function sameInspection(left, right) {
 }
 
 function makeInspection(input, authorId) {
-  // Construit la forme persistée. authorId vient du JWT, jamais du JSON client.
   return {
-    id: input.id, // Identifiant stable qui permet de reconnaître un rejeu.
-    hive_id: input.hive_id, // C'est la ruche demandée dans l'objet Postman.
+    id: input.id,
+    hive_id: input.hive_id,
     author_id: authorId,
-    inspected_at: input.inspected_at, // Joi a validé et converti la date.
+    inspected_at: input.inspected_at,
     queen_present: input.queen_present ?? null,
-    colony_status: input.colony_status, // Ex. "normale"; limité aux statuts autorisés.
+    colony_status: input.colony_status,
     observations: input.observations ?? null,
   };
 }
@@ -62,8 +61,6 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
     },
 
     async syncOne(user, input, index) {
-      // `input` est ici un élément du tableau reçu. Postman a déjà remplacé
-      // {{inspection_id}} et {{hive_id}} par leurs valeurs réelles.
       if (!input || typeof input !== "object" || Array.isArray(input)) {
         return { index, status: "rejected", detail: "Chaque élément doit être un objet JSON." };
       }
@@ -75,13 +72,9 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
       if (error) {
         return { index, ...(input.id ? { id: input.id } : {}), status: "rejected", detail: validationDetail(error) };
       }
-      // `value` contient les champs validés (notamment un inspected_at converti
-      // en Date par Joi) : id, hive_id, statut, reine, observations, version.
 
       let hive;
       try {
-        // Le hive_id de l'exemple désigne la ruche cible; on vérifie qu'elle
-        // existe avant d'utiliser ou d'écrire l'inspection.
         hive = await hivesService.getHive(value.hive_id);
       } catch (cause) {
         if (cause instanceof NotFoundError) {
@@ -93,13 +86,9 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
         return { index, id: value.id, status: "rejected", detail: "Vous n’avez pas accès à cette ruche." };
       }
 
-      // L'identité de l'auteur est ajoutée depuis le jeton, pas depuis input.
       const inspection = makeInspection(value, user.sub);
-      // L'id est la clé d'idempotence : on cherche d'abord si ce mobile a déjà
-      // envoyé cette inspection lors d'une tentative précédente.
       const existing = await inspectionsRepository.findById(inspection.id);
       if (!existing) {
-        // Première réception : insertion atomique. La base attribue version 1.
         const created = await inspectionsRepository.createIfAbsent(inspection);
         if (created.created) return { index, id: value.id, status: "created", inspection: created.inspection };
         if (created.inspection && sameInspection(created.inspection, inspection)) {
@@ -129,14 +118,10 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
         }
         return { index, id: value.id, status: "conflict", current_version: existing.version, detail: "Une inspection ne peut pas être déplacée vers une autre ruche." };
       }
-      // Même UUID et mêmes champs utiles : c'est un rejeu sans modification,
-      // donc on retourne l'enregistrement existant sans créer de doublon.
       if (sameInspection(existing, inspection)) {
         return { index, id: value.id, status: "unchanged", inspection: existing };
       }
       if (value.version === undefined || value.version !== existing.version) {
-        // Si le mobile a une version ancienne (ou n'envoie pas de version pour
-        // modifier), le serveur conserve son état et retourne un conflit.
         return {
           index,
           id: value.id,
@@ -146,8 +131,6 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
         };
       }
 
-      // Mise à jour optimiste : le repository n'écrit que si la version n'a
-      // toujours pas changé depuis la lecture ci-dessus.
       const updated = await inspectionsRepository.updateIfVersion(inspection, value.version);
       if (updated) return { index, id: value.id, status: "updated", inspection: updated };
       const latest = await inspectionsRepository.findById(inspection.id);
@@ -165,8 +148,6 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
 
     async sync(user, items) {
       const results = [];
-      // Traitement séquentiel : une erreur sur un élément devient `rejected`
-      // et n'empêche pas les éléments suivants du lot d'être traités.
       for (const [index, item] of items.entries()) {
         try {
           results.push(await this.syncOne(user, item, index));
