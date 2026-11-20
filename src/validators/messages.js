@@ -20,6 +20,7 @@ export const MESSAGES = {
   "boolean.base": "{{#label}} doit valoir true ou false.",
   "date.base": "{{#label}} doit être une date.",
   "date.format": "{{#label}} doit être une date ISO 8601.",
+  "date.max": "{{#label}} ne peut pas être dans le futur.",
   "array.base": "{{#label}} doit être un tableau.",
   "array.min": "{{#label}} doit contenir au moins {{#limit}} élément(s).",
   "array.max": "{{#label}} doit contenir au plus {{#limit}} éléments.",
