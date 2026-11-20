@@ -54,17 +54,19 @@ export function createMeasuresService({ hivesService, measuresRepository }) {
     async addMeasure(hiveId, input) {
       await hivesService.getHive(hiveId);
       const measure = validateMeasure(hiveId, input);
-      return measuresRepository.create(measure);
+      return measuresRepository.add(measure);
     },
 
     async listMeasures(hiveId, { limit = "50", offset = "0" } = {}) {
       await hivesService.getHive(hiveId);
       const parsedLimit = parseInteger(limit, "limit", 1, 500);
       const parsedOffset = parseInteger(offset, "offset", 0);
-      const items = await measuresRepository.findByHiveId(hiveId);
-      items.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+      const items = await measuresRepository.findByHive(hiveId, {
+        limit: parsedLimit,
+        offset: parsedOffset,
+      });
       return {
-        items: items.slice(parsedOffset, parsedOffset + parsedLimit),
+        items,
         limit: parsedLimit,
         offset: parsedOffset,
       };

@@ -3,7 +3,7 @@ import { NotFoundError } from "../errors.js";
 export function createHivesService({ hivesRepository }) {
   return {
     async listHives(siteId) {
-      return hivesRepository.findAll({ siteId });
+      return hivesRepository.findAll({ site_id: siteId });
     },
 
     async getHive(hiveId) {

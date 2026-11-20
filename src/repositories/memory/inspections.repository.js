@@ -2,13 +2,13 @@ export function createInspectionsRepository(initialInspections = []) {
   const inspections = initialInspections.map((inspection) => ({ ...inspection }));
 
   return {
-    async create(inspection) {
+    async add(inspection) {
       const saved = { ...inspection };
       inspections.push(saved);
       return { ...saved };
     },
 
-    async findByHiveId(hiveId) {
+    async findByHive(hiveId) {
       return inspections
         .filter((inspection) => inspection.hive_id === hiveId)
         .map((inspection) => ({ ...inspection }));

@@ -11,7 +11,7 @@ test("rejects a weight outside its physical range without saving it", async () =
     },
   };
   const measuresRepository = {
-    async create(measure) {
+    async add(measure) {
       savedMeasures.push(measure);
       return measure;
     },

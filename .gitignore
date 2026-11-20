@@ -2,3 +2,4 @@
 .env
 *.log
 data/*_30j.ndjson
+GUIDE-TP.md

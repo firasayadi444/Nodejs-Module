@@ -38,13 +38,13 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
   return {
     async listInspections(hiveId) {
       await hivesService.getHive(hiveId);
-      return inspectionsRepository.findByHiveId(hiveId);
+      return inspectionsRepository.findByHive(hiveId);
     },
 
     async addInspection(hiveId, input) {
       await hivesService.getHive(hiveId);
       const inspection = validateInspection(hiveId, input);
-      return inspectionsRepository.create(inspection);
+      return inspectionsRepository.add(inspection);
     },
   };
 }
