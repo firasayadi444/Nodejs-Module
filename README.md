@@ -3,7 +3,7 @@
 ## Membres du groupe
 
 - Firas AYADI
-- BENBRAHIM Mohamed
+- BENBRAHIM Mohammed
 
 ## TP 1 — Lecture des mesures sans bloquer
 
