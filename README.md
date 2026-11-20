@@ -64,3 +64,13 @@ Les entrées des routes ruches sont validées par Joi avant l’appel aux contr�
 Les erreurs métier typées et les erreurs PostgreSQL connues sont converties en réponses `application/problem+json` (RFC 9457). Les erreurs internes renvoient un message générique et ne transmettent ni requête SQL ni pile d’exécution. La taille du corps JSON est limitée à 1 Mo.
 
 **Vérifications :** `npm test` passe. Les tests API confirment qu’une mesure invalide renvoie `400` avec tous les problèmes détectés, qu’une pagination invalide et les champs inconnus sont refusés, que `author_id` ne peut pas être fourni par le client, et qu’un identifiant d’inspection dupliqué renvoie `409`. Un test d’erreur interne confirme que le SQL et la pile restent absents de la réponse.
+
+## TP 7 — Authentification et autorisation
+
+L’API fournit `POST /api/auth/login`, `POST /api/auth/refresh` et `POST /api/auth/users` (administrateur seulement). Les mots de passe sont hachés avec bcrypt. Les jetons d’accès (15 minutes) et de renouvellement (7 jours) sont signés avec deux secrets distincts, configurés par `JWT_ACCESS_SECRET` et `JWT_REFRESH_SECRET`. Après cinq mots de passe erronés, le compte est bloqué 15 minutes ; une connexion réussie remet le compteur à zéro.
+
+Toutes les routes `/api/hives` demandent `Authorization: Bearer <access_token>`. L’administrateur et le gestionnaire voient toutes les ruches, le coordinateur celles de son site et l’apiculteur celles dont il est propriétaire. Une ruche existante hors périmètre renvoie `403`; une ruche absente renvoie `404`. L’auteur d’une inspection est pris depuis le jeton et ne peut pas être choisi par le client.
+
+**Vérification d’accès :** le test API se connecte comme coordinateur `SITE-A` puis demande `GET /api/hives/HIVE-B1`; la réponse est `403 application/problem+json` avec le détail « Vous n’avez pas accès à cette ruche. ». Il confirme aussi `404` pour `NO-SUCH-HIVE`, les listes filtrées par rôle, le renouvellement, la création de compte et le blocage après cinq échecs. `npm test` passe (7 tests).
+
+Pour utiliser les comptes de démonstration, démarrez PostgreSQL avec les données du dépôt. Le mot de passe fourni par le seed pour ces comptes est `QueenBee2026!`. Copiez les noms de variables JWT de `.env-example` dans `.env`; `npm run dev` utilise les secrets locaux générés pour ce dépôt, et `.env` reste ignoré par Git.

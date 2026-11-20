@@ -23,3 +23,15 @@ export class ConflictError extends AppError {
     super(message, 409);
   }
 }
+
+export class AuthenticationError extends AppError {
+  constructor(message = "Authentification requise.") {
+    super(message, 401);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "Accès interdit.") {
+    super(message, 403);
+  }
+}

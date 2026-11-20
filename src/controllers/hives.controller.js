@@ -1,11 +1,13 @@
 export function createHivesController({ hivesService, measuresService, inspectionsService }) {
   return {
     listHives: async (req, res) => {
-      res.status(200).json(await hivesService.listHives(req.validated.site_id));
+      const hives = await hivesService.listHives(req.user, req.validated.site_id);
+      res.status(200).json(hives.map(({ owner_id, ...hive }) => hive));
     },
 
     getHive: async (req, res) => {
-      res.status(200).json(await hivesService.getHive(req.params.id));
+      const { owner_id, ...hive } = await hivesService.getHive(req.params.id);
+      res.status(200).json(hive);
     },
 
     addMeasure: async (req, res) => {
@@ -23,7 +25,10 @@ export function createHivesController({ hivesService, measuresService, inspectio
     },
 
     addInspection: async (req, res) => {
-      const inspection = await inspectionsService.addInspection(req.params.id, req.validated);
+      const inspection = await inspectionsService.addInspection(req.params.id, {
+        ...req.validated,
+        author_id: req.user.sub,
+      });
       res.status(201).json(inspection);
     },
   };

@@ -11,6 +11,7 @@ export function createInspectionsService({ hivesService, inspectionsRepository }
       const inspection = {
         id: input.id,
         hive_id: hiveId,
+        author_id: input.author_id,
         inspected_at: input.inspected_at,
         colony_status: input.colony_status,
         ...(input.queen_present === undefined ? {} : { queen_present: input.queen_present }),

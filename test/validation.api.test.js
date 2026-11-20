@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import jwt from "jsonwebtoken";
 import { createApp } from "../src/app.js";
 import { createMemoryRepositories } from "../src/repositories/memory/index.js";
 
+const jwtConfig = {
+  accessSecret: "test-access-secret-that-is-long-enough-for-hmac-256",
+  refreshSecret: "test-refresh-secret-that-is-distinct-and-long-enough",
+};
+const accessToken = jwt.sign({ sub: "test-admin", role: "admin" }, jwtConfig.accessSecret, {
+  issuer: "queenbee-api",
+  audience: "queenbee-client",
+});
+const authHeaders = { authorization: `Bearer ${accessToken}` };
+
 async function withServer(run, repositories = createMemoryRepositories()) {
-  const server = createApp(repositories).listen(0);
+  const server = createApp({ ...repositories, jwt: jwtConfig }).listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
   const address = server.address();
   try {
@@ -18,7 +29,7 @@ test("returns all measure validation errors in a problem response", async () => 
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/hives/SN-CASA-001/measures`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...authHeaders, "content-type": "application/json" },
       body: JSON.stringify({ timestamp: "invalid", weight_kg: 500, humidity_pct: 120 }),
     });
     const problem = await response.json();
@@ -33,14 +44,14 @@ test("returns all measure validation errors in a problem response", async () => 
 
 test("rejects invalid pagination and unknown query fields", async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/hives/SN-CASA-001/measures?limit=501&offset=-1`);
+    const response = await fetch(`${baseUrl}/api/hives/SN-CASA-001/measures?limit=501&offset=-1`, { headers: authHeaders });
     const problem = await response.json();
 
     assert.equal(response.status, 400);
     assert.match(problem.detail, /limit/i);
     assert.match(problem.detail, /offset/i);
 
-    const unknown = await fetch(`${baseUrl}/api/hives?unexpected=1`);
+    const unknown = await fetch(`${baseUrl}/api/hives?unexpected=1`, { headers: authHeaders });
     assert.equal(unknown.status, 400);
   });
 });
@@ -54,7 +65,7 @@ test("rejects forbidden inspection fields and maps duplicate IDs to 409", async 
     };
     const forbidden = await fetch(`${baseUrl}/api/hives/SN-CASA-001/inspections`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...authHeaders, "content-type": "application/json" },
       body: JSON.stringify({ ...payload, author_id: "forged-user" }),
     });
     assert.equal(forbidden.status, 400);
@@ -62,7 +73,7 @@ test("rejects forbidden inspection fields and maps duplicate IDs to 409", async 
 
     const request = () => fetch(`${baseUrl}/api/hives/SN-CASA-001/inspections`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...authHeaders, "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
     assert.equal((await request()).status, 201);
@@ -81,7 +92,7 @@ test("does not expose database messages or stack traces", async () => {
   };
 
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/hives`);
+    const response = await fetch(`${baseUrl}/api/hives`, { headers: authHeaders });
     const body = await response.text();
     assert.equal(response.status, 500);
     assert.doesNotMatch(body, /SELECT|database\.js|stack/i);

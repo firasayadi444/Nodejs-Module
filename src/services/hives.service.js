@@ -2,8 +2,15 @@ import { NotFoundError } from "../errors.js";
 
 export function createHivesService({ hivesRepository }) {
   return {
-    async listHives(siteId) {
-      return hivesRepository.findAll({ site_id: siteId });
+    async listHives(user, requestedSiteId) {
+      if (typeof user === "string" || user == null) {
+        return hivesRepository.findAll({ site_id: requestedSiteId ?? user ?? undefined });
+      }
+      if (user.role === "coordinateur") return hivesRepository.findAll({ site_id: user.site_id });
+      if (user.role === "apiculteur") {
+        return hivesRepository.findAll({ site_id: requestedSiteId, owner_id: user.sub });
+      }
+      return hivesRepository.findAll({ site_id: requestedSiteId });
     },
 
     async getHive(hiveId) {

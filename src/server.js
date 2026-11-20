@@ -21,7 +21,7 @@ if (config.storage === "postgres") {
   repositories = createMemoryRepositories();
 }
 
-const app = createApp(repositories);
+const app = createApp({ ...repositories, jwt: config.jwt });
 app.listen(config.port, () => {
   console.log(`API Queen Bee sur http://localhost:${config.port} (stockage : ${config.storage})`);
 });

@@ -31,6 +31,12 @@ export function readConfig(env = process.env) {
     throw new Error("DB_PASSWORD est obligatoire quand STORAGE=postgres.");
   }
 
+  const accessSecret = env.JWT_ACCESS_SECRET ?? "";
+  const refreshSecret = env.JWT_REFRESH_SECRET ?? "";
+  if (accessSecret.length < 32 || refreshSecret.length < 32 || accessSecret === refreshSecret) {
+    throw new Error("JWT_ACCESS_SECRET et JWT_REFRESH_SECRET doivent être distincts et contenir au moins 32 caractères.");
+  }
+
   const db = Object.freeze({
     host: env.DB_HOST ?? "localhost",
     port: parseInteger(env.DB_PORT ?? "5432", "DB_PORT", 1, 65535),
@@ -40,7 +46,7 @@ export function readConfig(env = process.env) {
     poolMax: parseInteger(env.DB_POOL_MAX ?? "10", "DB_POOL_MAX", 1, 100),
   });
 
-  return Object.freeze({ port, nodeEnv, storage, db });
+  return Object.freeze({ port, nodeEnv, storage, db, jwt: Object.freeze({ accessSecret, refreshSecret }) });
 }
 
 export let config;

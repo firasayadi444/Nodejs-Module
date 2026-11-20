@@ -10,8 +10,9 @@ export function createHivesRepository(initialHives = INITIAL_HIVES) {
   const hives = initialHives.map((hive) => ({ ...hive }));
 
   return {
-    async findAll({ site_id: siteId } = {}) {
-      const result = siteId ? hives.filter((hive) => hive.site_id === siteId) : hives;
+    async findAll({ site_id: siteId, owner_id: ownerId } = {}) {
+      const result = hives.filter((hive) => (!siteId || hive.site_id === siteId)
+        && (!ownerId || hive.owner_id === ownerId));
       return result.map((hive) => ({ ...hive }));
     },
 

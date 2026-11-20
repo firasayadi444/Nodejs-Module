@@ -4,14 +4,13 @@ export function createInspectionsRepository(pool) {
       const { rows } = await pool.query(
         `INSERT INTO inspections (
            id, hive_id, author_id, inspected_at, queen_present, colony_status, observations
-         ) VALUES (
-           $1, $2, (SELECT owner_id FROM hives WHERE id = $2), $3, $4, $5, $6
-         )
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, hive_id, author_id, inspected_at, queen_present,
                    colony_status, observations, version, created_at, updated_at`,
         [
           inspection.id,
           inspection.hive_id,
+          inspection.author_id,
           inspection.inspected_at,
           inspection.queen_present ?? null,
           inspection.colony_status,

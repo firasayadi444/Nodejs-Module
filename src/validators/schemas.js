@@ -9,6 +9,22 @@ export const hivesQuerySchema = Joi.object({
   site_id: Joi.string().trim().min(1),
 }).unknown(false);
 
+export const loginSchema = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).max(255).required(),
+  password: Joi.string().min(1).max(128).required(),
+}).unknown(false);
+
+export const refreshSchema = Joi.object({
+  refresh_token: Joi.string().required(),
+}).unknown(false);
+
+export const createUserSchema = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).max(255).required(),
+  password: Joi.string().min(12).max(128).required(),
+  role: Joi.string().valid("apiculteur", "coordinateur", "gestionnaire", "admin").required(),
+  site_id: Joi.string().trim().min(1).allow(null),
+}).unknown(false);
+
 export const measureSchema = Joi.object({
   hive_id: Joi.string(),
   site_id: Joi.string(),
