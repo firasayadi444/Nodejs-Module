@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { AuthenticationError, ForbiddenError, NotFoundError } from "../errors.js";
+import { canAccessHive } from "../utils/access.js";
 
 export function authenticate(accessSecret) {
   return (req, res, next) => {
@@ -28,10 +29,7 @@ export function authorizeHive(hivesService) {
     try {
       const hive = await hivesService.getHive(req.params.id);
       const user = req.user;
-      const allowed = user.role === "admin" || user.role === "gestionnaire"
-        || (user.role === "coordinateur" && user.site_id === hive.site_id)
-        || (user.role === "apiculteur" && user.sub === hive.owner_id);
-      if (!allowed) throw new ForbiddenError("Vous n’avez pas accès à cette ruche.");
+      if (!canAccessHive(user, hive)) throw new ForbiddenError("Vous n’avez pas accès à cette ruche.");
       req.hive = hive;
       return next();
     } catch (error) {

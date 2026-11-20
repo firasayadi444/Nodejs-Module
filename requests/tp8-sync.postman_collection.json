@@ -1,0 +1,320 @@
+{
+  "info": {
+    "_postman_id": "81de4453-cfc4-4eab-8640-7b664d9a14d2",
+    "name": "Queen Bee - TP 8 Synchronisation",
+    "description": "Scénarios de rejeu des mesures et inspections, mise à jour optimiste, conflit, lots rejetés et contrôle de rôle. Pré-requis : API démarrée sur localhost:3000 avec la base seedée. Lancer les requêtes dans l'ordre conseillé.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "beekeeper_email", "value": "api1.sn-casa@queenbee.test" },
+    { "key": "admin_email", "value": "admin@queenbee.test" },
+    { "key": "demo_password", "value": "QueenBee2026!" },
+    { "key": "hive_id", "value": "SN-CASA-001" },
+    { "key": "access_token", "value": "" },
+    { "key": "inspection_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 - Authentification",
+      "item": [
+        {
+          "name": "Connexion apiculteur (prépare les scénarios)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Connexion acceptée', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('access_token', data.access_token);",
+                  "pm.test('Jeton d’accès reçu', function () { pm.expect(data.access_token).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{beekeeper_email}}\",\n  \"password\": \"{{demo_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 - Inspections : créer et rejouer",
+      "item": [
+        {
+          "name": "1A - Créer une inspection (created, version 1)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('inspection_id', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lot accepté', function () { pm.response.to.have.status(200); });",
+                  "const result = pm.response.json().results[0];",
+                  "pm.test('Inspection créée', function () { pm.expect(result.status).to.eql('created'); pm.expect(result.inspection.version).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspections\": [\n    {\n      \"id\": \"{{inspection_id}}\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T10:00:00Z\",\n      \"colony_status\": \"normale\",\n      \"queen_present\": true,\n      \"observations\": \"Test Postman TP8\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "1B - Rejouer le même lot (unchanged)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lot accepté', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Rejeu sans doublon', function () { pm.expect(pm.response.json().results[0].status).to.eql('unchanged'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspections\": [\n    {\n      \"id\": \"{{inspection_id}}\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T10:00:00Z\",\n      \"colony_status\": \"normale\",\n      \"queen_present\": true,\n      \"observations\": \"Test Postman TP8\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "1C - Voir les inspections de la ruche",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Historique accessible', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Inspection version 1 présente', function () { const rows = pm.response.json(); const row = rows.find((x) => x.id === pm.collectionVariables.get('inspection_id')); pm.expect(row).to.exist; pm.expect(row.version).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{base_url}}/api/hives/{{hive_id}}/inspections" }
+        }
+      ]
+    },
+    {
+      "name": "2 - Version optimiste et conflit",
+      "item": [
+        {
+          "name": "2A - Modifier avec la version courante (updated, version 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lot accepté', function () { pm.response.to.have.status(200); });",
+                  "const result = pm.response.json().results[0];",
+                  "pm.test('Mise à jour versionnée', function () { pm.expect(result.status).to.eql('updated'); pm.expect(result.inspection.version).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspections\": [\n    {\n      \"id\": \"{{inspection_id}}\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T10:00:00Z\",\n      \"colony_status\": \"forte\",\n      \"queen_present\": true,\n      \"observations\": \"Mise à jour version 2\",\n      \"version\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "2B - Envoyer une version périmée (conflict, version serveur conservée)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lot accepté avec résultat métier', function () { pm.response.to.have.status(200); });",
+                  "const result = pm.response.json().results[0];",
+                  "pm.test('Conflit détecté', function () { pm.expect(result.status).to.eql('conflict'); pm.expect(result.current_version).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspections\": [\n    {\n      \"id\": \"{{inspection_id}}\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T10:00:00Z\",\n      \"colony_status\": \"faible\",\n      \"queen_present\": false,\n      \"observations\": \"Modification périmée\",\n      \"version\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "2C - Vérifier que le serveur a conservé la version 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inspection version 2 conservée', function () { pm.response.to.have.status(200); const row = pm.response.json().find((x) => x.id === pm.collectionVariables.get('inspection_id')); pm.expect(row.version).to.eql(2); pm.expect(row.colony_status).to.eql('forte'); });"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{base_url}}/api/hives/{{hive_id}}/inspections" }
+        }
+      ]
+    },
+    {
+      "name": "3 - Résultats par élément et autorisations",
+      "item": [
+        {
+          "name": "3A - Lot mixte : créé et rejeté indépendamment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Le lot reste traité', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Résultats isolés par élément', function () { pm.expect(pm.response.json().results.map((x) => x.status)).to.eql(['created', 'rejected', 'rejected']); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspections\": [\n    {\n      \"id\": \"{{$guid}}\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T11:00:00Z\",\n      \"colony_status\": \"normale\"\n    },\n    {\n      \"id\": \"pas-un-uuid\",\n      \"hive_id\": \"{{hive_id}}\",\n      \"inspected_at\": \"2026-10-31T11:00:00Z\",\n      \"colony_status\": \"normale\"\n    },\n    {\n      \"id\": \"{{$guid}}\",\n      \"hive_id\": \"RUche-inexistante\",\n      \"inspected_at\": \"2026-10-31T11:00:00Z\",\n      \"colony_status\": \"normale\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "3B - Lot vide (400)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Lot vide refusé', function () { pm.response.to.have.status(400); });"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"inspections\":[]}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "3C - Plus de 500 éléments (400)",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.request.body.update(JSON.stringify({ inspections: Array.from({ length: 501 }, () => ({})) }));"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Lot trop grand refusé', function () { pm.response.to.have.status(400); });"] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"inspections\":[]}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "3D - Se connecter comme administrateur",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Connexion admin', function () { pm.response.to.have.status(200); }); pm.collectionVariables.set('access_token', pm.response.json().access_token);"] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"{{admin_email}}\",\"password\":\"{{demo_password}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        },
+        {
+          "name": "3E - Rôle admin refusé pour le sync (403)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Rôle non autorisé', function () { pm.response.to.have.status(403); });"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"inspections\":[{}]}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/api/inspections/sync"
+          }
+        },
+        {
+          "name": "3F - Reconnexion apiculteur",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Connexion apiculteur', function () { pm.response.to.have.status(200); }); pm.collectionVariables.set('access_token', pm.response.json().access_token);"] } }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"{{beekeeper_email}}\",\"password\":\"{{demo_password}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Mesures idempotentes",
+      "item": [
+        {
+          "name": "4A - Envoyer une mesure (répéter cette requête)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Mesure acceptée', function () { pm.response.to.have.status(201); });"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-10-31T23:45:00Z\",\n  \"weight_kg\": 42.5,\n  \"temp_internal_c\": 34.0,\n  \"temp_external_c\": 24.0,\n  \"humidity_pct\": 61,\n  \"acoustic_activity_score\": 0.05,\n  \"battery_pct\": 80,\n  \"position_lat\": 12.574304,\n  \"position_lon\": -16.287302\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/hives/{{hive_id}}/measures"
+          }
+        },
+        {
+          "name": "4B - Vérifier une seule mesure à cet horodatage",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Historique mesures accessible', function () { pm.response.to.have.status(200); });", "pm.test('Pas de doublon pour la clé ruche/horodatage', function () { const rows = pm.response.json().items; pm.expect(rows.filter((x) => new Date(x.timestamp).toISOString() === '2026-10-31T23:45:00.000Z')).to.have.length(1); });"] } }],
+          "request": { "method": "GET", "url": "{{base_url}}/api/hives/{{hive_id}}/measures?limit=500&offset=0" }
+        }
+      ]
+    }
+  ]
+}

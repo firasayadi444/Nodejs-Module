@@ -3,6 +3,9 @@ export function createMeasuresRepository(initialMeasures = []) {
 
   return {
     async add(measure) {
+      const existing = measures.find((item) => item.hive_id === measure.hive_id
+        && new Date(item.timestamp).getTime() === new Date(measure.timestamp).getTime());
+      if (existing) return { ...existing };
       const saved = { ...measure };
       measures.push(saved);
       return { ...saved };

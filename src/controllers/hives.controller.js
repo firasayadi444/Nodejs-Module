@@ -31,5 +31,10 @@ export function createHivesController({ hivesService, measuresService, inspectio
       });
       res.status(201).json(inspection);
     },
+
+    syncInspections: async (req, res) => {
+      const results = await inspectionsService.sync(req.user, req.validated.inspections);
+      res.status(200).json({ results });
+    },
   };
 }

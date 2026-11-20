@@ -47,3 +47,12 @@ export const inspectionSchema = Joi.object({
   queen_present: Joi.boolean().allow(null),
   observations: Joi.string().max(2000).allow("", null),
 }).unknown(false);
+
+export const inspectionSyncItemSchema = inspectionSchema.keys({
+  hive_id: Joi.string().required(),
+  version: Joi.number().integer().min(1),
+});
+
+export const inspectionSyncSchema = Joi.object({
+  inspections: Joi.array().items(Joi.any()).min(1).max(500).required(),
+}).unknown(false);

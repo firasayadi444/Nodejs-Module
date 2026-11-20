@@ -61,7 +61,7 @@ Chaque erreur conserverait une connexion empruntée. Après dix erreurs, le pool
 
 Les entrées des routes ruches sont validées par Joi avant l’appel aux contrôleurs. Les schémas rejettent les champs inconnus, vérifient les limites physiques des mesures, les statuts et dates d’inspection, les filtres et la pagination. Les messages Joi sont en français. Les données validées sont transmises aux contrôleurs via `req.validated`.
 
-Les erreurs métier typées et les erreurs PostgreSQL connues sont converties en réponses `application/problem+json` (RFC 9457). Les erreurs internes renvoient un message générique et ne transmettent ni requête SQL ni pile d’exécution. La taille du corps JSON est limitée à 1 Mo.
+Les erreurs métier typées et les erreurs PostgreSQL connues sont converties en réponses `application/problem+json` (RFC 9457). Les erreurs internes renvoient un message générique et ne transmettent ni requête SQL ni pile d’exécution. La taille du corps JSON est limitée à 5 Mo pour accepter un lot maximal d’inspections.
 
 **Vérifications :** `npm test` passe. Les tests API confirment qu’une mesure invalide renvoie `400` avec tous les problèmes détectés, qu’une pagination invalide et les champs inconnus sont refusés, que `author_id` ne peut pas être fourni par le client, et qu’un identifiant d’inspection dupliqué renvoie `409`. Un test d’erreur interne confirme que le SQL et la pile restent absents de la réponse.
 
@@ -71,6 +71,26 @@ L’API fournit `POST /api/auth/login`, `POST /api/auth/refresh` et `POST /api/a
 
 Toutes les routes `/api/hives` demandent `Authorization: Bearer <access_token>`. L’administrateur et le gestionnaire voient toutes les ruches, le coordinateur celles de son site et l’apiculteur celles dont il est propriétaire. Une ruche existante hors périmètre renvoie `403`; une ruche absente renvoie `404`. L’auteur d’une inspection est pris depuis le jeton et ne peut pas être choisi par le client.
 
-**Vérification d’accès :** le test API se connecte comme coordinateur `SITE-A` puis demande `GET /api/hives/HIVE-B1`; la réponse est `403 application/problem+json` avec le détail « Vous n’avez pas accès à cette ruche. ». Il confirme aussi `404` pour `NO-SUCH-HIVE`, les listes filtrées par rôle, le renouvellement, la création de compte et le blocage après cinq échecs. `npm test` passe (7 tests).
+**Vérification d’accès :** le test API se connecte comme coordinateur `SITE-A` puis demande `GET /api/hives/HIVE-B1`; la réponse est `403 application/problem+json` avec le détail « Vous n’avez pas accès à cette ruche. ». Il confirme aussi `404` pour `NO-SUCH-HIVE`, les listes filtrées par rôle, le renouvellement, la création de compte et le blocage après cinq échecs. `npm test` passe (10 tests au total).
 
 Pour utiliser les comptes de démonstration, démarrez PostgreSQL avec les données du dépôt. Le mot de passe fourni par le seed pour ces comptes est `QueenBee2026!`. Copiez les noms de variables JWT de `.env-example` dans `.env`; `npm run dev` utilise les secrets locaux générés pour ce dépôt, et `.env` reste ignoré par Git.
+
+## TP 8 — Synchronisation idempotente
+
+`POST /api/inspections/sync` accepte un lot JSON `{"inspections":[...]}` de 1 à 500 inspections et exige un jeton d’accès d’apiculteur. Chaque élément reçoit son propre résultat : `created`, `unchanged`, `updated`, `conflict` ou `rejected`. Une entrée invalide, une ruche inexistante ou inaccessible ne bloque pas le traitement des autres entrées. Le champ `version` est requis pour modifier une inspection existante; les nouvelles inspections commencent à la version 1.
+
+Les mesures sont identifiées par la clé PostgreSQL (`hive_id`, `measured_at`) : rejouer la même mesure retourne l’enregistrement déjà présent. Une inspection rejouée avec les mêmes données renvoie `unchanged`; les mêmes identifiants avec des données différentes ne créent pas de doublon.
+
+**Règle de conflit — le serveur l’emporte :** une mise à jour n’est appliquée que si la version envoyée correspond à la version courante. Une version périmée reçoit `conflict` et `current_version`, sans modifier les données du serveur. Le client peut alors recharger la version actuelle et décider de renvoyer ses changements.
+
+**Vérifications :** `npm test` couvre le rejeu des mesures et inspections, la création et mise à jour versionnée, le conflit périmé, le rejet isolé d’une inspection, le lot vide ou supérieur à 500 éléments, et le refus d’un rôle non autorisé.
+
+**Postman :** importer [`requests/tp8-sync.postman_collection.json`](requests/tp8-sync.postman_collection.json), démarrer l’API et la base seedée, puis exécuter les requêtes dans l’ordre avec le Collection Runner. La collection se connecte avec `api1.sn-casa@queenbee.test` / `QueenBee2026!`, mémorise le jeton et génère un nouvel UUID d’inspection pour chaque exécution. La section 3D/3E teste l’accès admin refusé, puis 3F rétablit la session apiculteur.
+
+## Livraison Jour 2 — État des vérifications
+
+- Les requêtes PostgreSQL du dépôt utilisent des paramètres SQL; les insertions rejouables et les mises à jour optimistes sont implémentées dans les repositories PostgreSQL.
+- Les durées d’import TP 5, les réponses demandées, les erreurs RFC 9457, l’authentification et la règle de conflit sont consignées dans ce README.
+- `npm test` passe : 10 tests.
+- `.env` est ignoré et absent de l’index Git; `.env-example` contient des valeurs factices.
+- **Vérification restante :** le moteur Docker/PostgreSQL n’était pas accessible pendant cette livraison. Les tests utilisent les repositories mémoire; le démarrage contre la base seedée et l’exécution de la collection Postman contre PostgreSQL restent à faire.

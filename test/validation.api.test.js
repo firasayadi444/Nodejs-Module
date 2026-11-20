@@ -77,9 +77,14 @@ test("rejects forbidden inspection fields and maps duplicate IDs to 409", async 
       body: JSON.stringify(payload),
     });
     assert.equal((await request()).status, 201);
-    const duplicate = await request();
-    assert.equal(duplicate.status, 409);
-    assert.match((await duplicate.json()).detail, /existe déjà/i);
+    assert.equal((await request()).status, 201);
+    const conflictingDuplicate = await fetch(`${baseUrl}/api/hives/SN-CASA-001/inspections`, {
+      method: "POST",
+      headers: { ...authHeaders, "content-type": "application/json" },
+      body: JSON.stringify({ ...payload, observations: "Contenu différent" }),
+    });
+    assert.equal(conflictingDuplicate.status, 409);
+    assert.match((await conflictingDuplicate.json()).detail, /existe déjà/i);
   });
 });
 
